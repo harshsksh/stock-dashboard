@@ -36,9 +36,13 @@ async function loadCompanies() {
 }
 
 async function loadStockData(symbol, days = 30) {
-    if (!symbol) return;
+    if (!symbol) {
+        console.warn('No symbol provided to loadStockData');
+        return;
+    }
     currentSymbol = symbol;
     try {
+        console.log(`Loading data for ${symbol} (${days} days)...`);
         const response = await fetch(API_URL + '/data/' + symbol + '?days=' + days);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -47,34 +51,111 @@ async function loadStockData(symbol, days = 30) {
         
         if (!data.data || data.data.length === 0) {
             console.error('No data available for symbol:', symbol);
+            alert(`No data available for ${symbol}. Please ensure the backend has collected data.`);
             return;
         }
+        
+        console.log(`Received ${data.data.length} data points`);
+        console.log('Sample data:', data.data[0]);
         
         const dates = data.data.map(d => d.date).reverse();
         const prices = data.data.map(d => d.close).reverse();
         
-        if (chart) chart.destroy();
+        // Validate and filter out null/undefined values
+        const validData = dates.map((date, idx) => ({
+            date: date,
+            price: prices[idx]
+        })).filter(item => item.date && item.price != null);
         
+        if (validData.length === 0) {
+            console.error('No valid data points after filtering');
+            alert('No valid data available for this symbol.');
+            return;
+        }
+        
+        const validDates = validData.map(item => item.date);
+        const validPrices = validData.map(item => parseFloat(item.price));
+        
+        console.log(`Valid data points: ${validDates.length}`);
+        console.log('First date:', validDates[0], 'First price:', validPrices[0]);
+        console.log('Last date:', validDates[validDates.length - 1], 'Last price:', validPrices[validPrices.length - 1]);
+        
+        // Hide placeholder and show chart
+        const placeholder = document.getElementById('chart-placeholder');
         const chartElement = document.getElementById('stockChart');
+        
+        // Destroy existing chart if it exists
+        if (chart) {
+            chart.destroy();
+            chart = null;
+        }
+        
         if (!chartElement) {
             console.error('Chart element not found');
             return;
         }
         
+        // Check if Chart.js is loaded
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is not loaded. Please check the CDN link.');
+            if (placeholder) placeholder.innerHTML = '<p style="color: red;">Chart.js library failed to load. Please check your internet connection.</p>';
+            return;
+        }
+        
+        // Hide placeholder and show canvas
+        if (placeholder) placeholder.style.display = 'none';
+        chartElement.style.display = 'block';
+        
         const ctx = chartElement.getContext('2d');
+        
         chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: dates,
+                labels: validDates,
                 datasets: [{
-                    label: 'Close Price',
-                    data: prices,
+                    label: 'Close Price (₹)',
+                    data: validPrices,
                     borderColor: '#667eea',
-                    tension: 0.4
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5
                 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Price (₹)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                }
             }
         });
         
+        console.log('Chart created successfully');
         loadSummary(symbol);
     } catch (error) {
         console.error('Error loading stock data:', error);

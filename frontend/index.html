@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Intelligence Dashboard</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -48,7 +48,10 @@
                 </div>
                 
                 <div class="chart-container">
-                    <canvas id="stockChart"></canvas>
+                    <div id="chart-placeholder" style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">
+                        <p>Select a company to view stock chart</p>
+                    </div>
+                    <canvas id="stockChart" style="display: none;"></canvas>
                 </div>
             </main>
         </div>
