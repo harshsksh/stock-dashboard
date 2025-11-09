@@ -1,15 +1,33 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from typing import List, Optional
 import uvicorn
 from database import Database
 from analytics import StockAnalytics
 from data_collector import DataCollector
 
+# Initialize components
+db = Database()
+analytics = StockAnalytics(db)
+collector = DataCollector(db)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize database and collect data on startup"""
+    print("🚀 Starting Stock Intelligence API...")
+    await db.init_db()
+    print("📊 Collecting stock data...")
+    await collector.collect_initial_data()
+    print("✅ Ready to serve requests!")
+    yield
+    # Cleanup code can go here if needed
+
 app = FastAPI(
     title="Stock Intelligence API",
     description="Real-time stock data analytics platform",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Enable CORS for frontend
@@ -20,20 +38,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize components
-db = Database()
-analytics = StockAnalytics(db)
-collector = DataCollector(db)
-
-@app.on_event("startup")
-async def startup():
-    """Initialize database and collect data on startup"""
-    print("🚀 Starting Stock Intelligence API...")
-    await db.init_db()
-    print("📊 Collecting stock data...")
-    await collector.collect_initial_data()
-    print("✅ Ready to serve requests!")
 
 @app.get("/")
 async def root():

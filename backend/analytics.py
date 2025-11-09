@@ -58,6 +58,12 @@ class StockAnalytics:
         if not summary1 or not summary2:
             return None
         
+        # Check for None values to avoid division errors
+        if (summary1.get('current_price') is None or summary1.get('avg_close') is None or
+            summary2.get('current_price') is None or summary2.get('avg_close') is None or
+            summary1['avg_close'] == 0 or summary2['avg_close'] == 0):
+            return None
+        
         perf1 = ((summary1['current_price'] - summary1['avg_close']) / summary1['avg_close']) * 100
         perf2 = ((summary2['current_price'] - summary2['avg_close']) / summary2['avg_close']) * 100
         

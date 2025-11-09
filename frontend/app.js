@@ -6,6 +6,14 @@ let allCompanies = [];
 document.addEventListener('DOMContentLoaded', () => {
     loadCompanies();
     loadInsights();
+    
+    // Add search functionality
+    const searchInput = document.getElementById('search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            filterCompanies(e.target.value);
+        });
+    }
 });
 
 async function loadCompanies() {
@@ -28,17 +36,32 @@ async function loadCompanies() {
 }
 
 async function loadStockData(symbol, days = 30) {
+    if (!symbol) return;
     currentSymbol = symbol;
     try {
         const response = await fetch(API_URL + '/data/' + symbol + '?days=' + days);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
+        
+        if (!data.data || data.data.length === 0) {
+            console.error('No data available for symbol:', symbol);
+            return;
+        }
         
         const dates = data.data.map(d => d.date).reverse();
         const prices = data.data.map(d => d.close).reverse();
         
         if (chart) chart.destroy();
         
-        const ctx = document.getElementById('stockChart').getContext('2d');
+        const chartElement = document.getElementById('stockChart');
+        if (!chartElement) {
+            console.error('Chart element not found');
+            return;
+        }
+        
+        const ctx = chartElement.getContext('2d');
         chart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -54,7 +77,7 @@ async function loadStockData(symbol, days = 30) {
         
         loadSummary(symbol);
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error loading stock data:', error);
     }
 }
 
@@ -86,6 +109,7 @@ async function loadInsights() {
         const losersData = await losersRes.json();
         
         const gainersList = document.getElementById('gainers-list');
+        gainersList.innerHTML = ''; // Clear existing items
         gainersData.gainers.forEach(g => {
             const div = document.createElement('div');
             div.className = 'insight-item positive';
@@ -94,6 +118,7 @@ async function loadInsights() {
         });
         
         const losersList = document.getElementById('losers-list');
+        losersList.innerHTML = ''; // Clear existing items
         losersData.losers.forEach(l => {
             const div = document.createElement('div');
             div.className = 'insight-item negative';
@@ -103,4 +128,21 @@ async function loadInsights() {
     } catch (error) {
         console.error('Error:', error);
     }
+}
+
+function filterCompanies(searchTerm) {
+    const list = document.getElementById('companies-list');
+    const filtered = allCompanies.filter(company => 
+        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.symbol.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    list.innerHTML = '';
+    filtered.forEach(company => {
+        const div = document.createElement('div');
+        div.className = 'company-item';
+        div.innerHTML = '<h4>' + company.name + '</h4><p>' + company.symbol + '</p>';
+        div.onclick = () => loadStockData(company.symbol);
+        list.appendChild(div);
+    });
 }
