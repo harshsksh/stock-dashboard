@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Intelligence Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Stock Intelligence Dashboard</h1>
+            <p>Real-time Indian Stock Market Analytics</p>
+        </header>
+        
+        <div class="insights-section">
+            <div class="insight-card gainers">
+                <h3>Top Gainers</h3>
+                <div id="gainers-list"></div>
+            </div>
+            <div class="insight-card losers">
+                <h3>Top Losers</h3>
+                <div id="losers-list"></div>
+            </div>
+        </div>
+        
+        <div class="dashboard">
+            <aside class="sidebar">
+                <h2>Companies</h2>
+                <div class="search-box">
+                    <input type="text" id="search" placeholder="Search companies...">
+                </div>
+                <div id="companies-list"></div>
+            </aside>
+            
+            <main class="content">
+                <div class="stock-header" id="stock-header">
+                    <h2>Select a company to view details</h2>
+                </div>
+                
+                <div class="stats-grid" id="stats-grid"></div>
+                
+                <div class="chart-controls">
+                    <button class="btn" onclick="loadStockData(currentSymbol, 30)">30 Days</button>
+                    <button class="btn" onclick="loadStockData(currentSymbol, 90)">90 Days</button>
+                    <button class="btn" onclick="loadStockData(currentSymbol, 365)">1 Year</button>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="stockChart"></canvas>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Built for Jarnox Internship Assignment</p>
+    </footer>
+    
+    <script src="app.js"></script>
+</body>
+</html>
