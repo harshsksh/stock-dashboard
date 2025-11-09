@@ -4,8 +4,11 @@ let currentSymbol = null;
 let allCompanies = [];
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadCompanies();
-    loadInsights();
+    // Test backend connection first
+    testBackendConnection().then(() => {
+        loadCompanies();
+        loadInsights();
+    });
     
     // Add search functionality
     const searchInput = document.getElementById('search');
@@ -16,22 +19,70 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+async function testBackendConnection() {
+    try {
+        console.log('Testing backend connection to:', API_URL);
+        const response = await fetch(API_URL + '/');
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Backend is running:', data);
+        } else {
+            console.error('❌ Backend responded with status:', response.status);
+        }
+    } catch (error) {
+        console.error('❌ Cannot connect to backend:', error);
+        console.error('Please ensure the backend is running on', API_URL);
+        alert('Cannot connect to backend!\n\nPlease ensure:\n1. Backend is running\n2. Backend is on ' + API_URL + '\n3. No firewall is blocking the connection');
+    }
+}
+
 async function loadCompanies() {
     try {
+        console.log('Fetching companies from:', API_URL + '/companies');
         const response = await fetch(API_URL + '/companies');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
-        allCompanies = data.companies;
+        console.log('Companies received:', data);
+        allCompanies = data.companies || [];
+        
+        if (allCompanies.length === 0) {
+            console.warn('No companies found. Backend may not have collected data yet.');
+            const list = document.getElementById('companies-list');
+            if (list) {
+                list.innerHTML = '<p style="color: #666; padding: 20px;">No companies available. Please ensure backend has finished collecting data.</p>';
+            }
+            return;
+        }
         
         const list = document.getElementById('companies-list');
+        if (!list) {
+            console.error('Companies list element not found');
+            return;
+        }
+        
+        list.innerHTML = ''; // Clear any existing content
         allCompanies.forEach(company => {
             const div = document.createElement('div');
             div.className = 'company-item';
             div.innerHTML = '<h4>' + company.name + '</h4><p>' + company.symbol + '</p>';
-            div.onclick = () => loadStockData(company.symbol);
+            div.onclick = () => {
+                console.log('Company clicked:', company.symbol);
+                loadStockData(company.symbol);
+            };
             list.appendChild(div);
         });
+        
+        console.log(`Loaded ${allCompanies.length} companies`);
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error loading companies:', error);
+        const list = document.getElementById('companies-list');
+        if (list) {
+            list.innerHTML = '<p style="color: red; padding: 20px;">Error loading companies. Is the backend running on ' + API_URL + '?</p>';
+        }
     }
 }
 
@@ -42,9 +93,22 @@ async function loadStockData(symbol, days = 30) {
     }
     currentSymbol = symbol;
     try {
+        const url = API_URL + '/data/' + encodeURIComponent(symbol) + '?days=' + days;
         console.log(`Loading data for ${symbol} (${days} days)...`);
-        const response = await fetch(API_URL + '/data/' + symbol + '?days=' + days);
+        console.log(`Request URL: ${url}`);
+        
+        const response = await fetch(url);
+        
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`HTTP ${response.status} Error:`, errorText);
+            
+            if (response.status === 404) {
+                const errorData = await response.json().catch(() => ({ detail: 'Symbol not found' }));
+                alert(`Symbol "${symbol}" not found in database.\n\nPlease ensure:\n1. Backend is running on ${API_URL}\n2. Data collection has completed\n3. Symbol exists in database`);
+            } else {
+                alert(`Error ${response.status}: ${errorText}`);
+            }
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
